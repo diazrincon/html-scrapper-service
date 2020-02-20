@@ -44,7 +44,7 @@ const init = async (res) => {
         await pdf.create(table, options).toFile(pathPaginas + name + '/Report.pdf', function(err, result) {
             if (err) return console.log(err);
             console.log("pdf create");
-            data = {};
+            data = [];
             table = '';
             zipFolder(pathPaginas + name , './zips/request#'+requestNumber +'.zip', async function(err) {
                 if(err) {
