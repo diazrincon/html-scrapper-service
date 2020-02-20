@@ -7,7 +7,7 @@ const fs = require('fs');
 
 const router = express.Router();
 
-const scrappedPath = './Paginas/';
+const scrappedPath = './scrapped/';
 let name;
 let requestNumber;
 let buildPathPdf;
