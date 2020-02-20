@@ -51,7 +51,7 @@ const init = async (res) => {
                     console.log('oh no!', err);
                 } else {
                     console.log('EXCELLENT');
-                    await res.sendFile(path.join(__dirname, '../zips/request#'+requestNumber +'.zip'));
+                    await res.status(200).send('Download ready');
                     console.log('send')
                     await rimraf.sync(pathPaginas+name);
                 }
@@ -77,9 +77,9 @@ function walkDir(dir, callback) {
 
 router.get('/:requestNumber'+".zip",function (req,res,next) {
     res.sendFile(path.join(__dirname, '../zips/request#'+ req.params.requestNumber+".zip"));
-})
+});
 
-router.get('/pagina',function (req,res,next) {
+router.post('/pagina',function (req,res,next) {
     name = req.body.url.replace('https://', '').replace('http://','').replace('www.','').replace('.com','').replace('/','');
     requestNumber = req.body.requestNumber;
     buildPathPdf = path.resolve(pathPaginas + name + '/Report.pdf')
