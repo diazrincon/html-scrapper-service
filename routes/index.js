@@ -1,152 +1,89 @@
-const express = require('express');
-const scrapper = require('website-scraper');
-const zipFolder = require('zip-folder');
-const puppeteer = require('puppeteer');
+var express = require('express');
+var pdf = require('html-pdf');
+var rimraf = require("rimraf");
+const scrape = require('website-scraper');
 const path = require('path');
-const fs = require('fs');
-const rimraf = require('rimraf');
-
-const router = express.Router();
-
-const scrappedPath = './scrapped/';
-let name;
-let requestNumber;
-let buildPathPdf;
-
-const buildPaths = {
-    buildPathHtml: path.resolve('./build.html')
+const pathPaginas  = './scrapped/';
+var router = express.Router();
+var name;
+var table;
+var requestNumber;
+var buildPathPdf;
+var zipFolder = require('zip-folder');
+var options = {
+    "format": "A4",
+    "orientation": "landscape",
+    "border": {
+        "top": "0.1in",
+    },
+    "timeout": "120000"
 };
+const fs = require('fs');
+var data = [];
 
-let data = [];
+table += "<table border='1' style='width:100%;word-break:break-word;'>";
+table += "<tr>";
+table += "<th >Nombre de archivo</th>";
+table += "<th >Tamaño de archivo";
+table += "</tr>";
 
-
-const createRow = (item) => `
-  <tr>
-    <td>${item.nameFile}</td>
-    <td>${item.fileSize} KB</td>
-  </tr>
-`;
-
-const createTable = (rows) => `
-  <table>
-    <tr>
-        <th>Nombre de archivo</td>
-        <th>Tamaño de archivo</td>
-    </tr>
-    ${rows}
-  </table>
-`;
-
-const createHtml = (table) => `
-  <html>
-    <head>
-      <style>
-        table {
-          width: 100%;
-        }
-        tr {
-          text-align: left;
-          border: 1px solid black;
-        }
-        th, td {
-          padding: 15px;
-        }
-        tr:nth-child(odd) {
-          background: #CCC
-        }
-        tr:nth-child(even) {
-          background: #FFF
-        }
-        .no-content {
-          background-color: red;
-        }
-      </style>
-    </head>
-    <body>
-      ${table}
-    </body>
-  </html>
-`;
 
 /* GET home page. */
-router.get('/', function (req, res) {
-    res.render('index', {title: 'Express'});
+router.get('/', function(req, res, next) {
+    res.render('index', { title: 'Express' });
 });
-
-const doesFileExist = (filePath) => {
-    try {
-        fs.statSync(filePath); // get information of the specified file path.
-        return true;
-    } catch (error) {
-        return false;
-    }
-};
-
-const printPdf = async () => {
-    console.log('Starting: Generating PDF Process, Kindly wait ..');
-    /** Launch a headleass browser */
-    const browser = await puppeteer.launch();
-    /* 1- Ccreate a newPage() object. It is created in default browser context. */
-    const page = await browser.newPage();
-    /* 2- Will open our generated `.html` file in the new Page instance. */
-    await page.goto(buildPaths.buildPathHtml, {waitUntil: 'networkidle0'});
-    /* 3- Take a snapshot of the PDF */
-    const pdf = await page.pdf({
-        format: 'A4',
-        margin: {
-            top: '20px',
-            right: '20px',
-            bottom: '20px',
-            left: '20px'
-        }
-    });
-    /* 4- Cleanup: close browser. */
-    await browser.close();
-    console.log('Ending: Generating PDF Process');
-    return pdf;
-};
 
 const init = async (res) => {
     try {
-        const pdf = await printPdf();
-        fs.writeFileSync(buildPathPdf, pdf);
-        console.log('Succesfully created an PDF table');
-        zipFolder(scrappedPath + name, './zips/request#' + requestNumber + '.zip', function (err) {
-            if (err) {
-                console.log('oh no!', err);
-            } else {
-                console.log('EXCELLENT');
-                res.sendFile(path.join(__dirname, '../zips/request#' + requestNumber + '.zip'));
-                rimraf.sign(scrappedPath + name);
-            }
+        data.forEach(function(row){
+            table += "<tr>";
+            table += "<td>"+row.nameFile+"</td>";
+            table += "<td>"+row.fileSize+"</td>";
+            table += "</tr>";
         });
+        table += "</table>";
+        await pdf.create(table, options).toFile(pathPaginas + name + '/Report.pdf', function(err, result) {
+            if (err) return console.log(err);
+            console.log("pdf create");
+            zipFolder(pathPaginas + name , './zips/request#'+requestNumber +'.zip', async function(err) {
+                if(err) {
+                    console.log('oh no!', err);
+                } else {
+                    console.log('EXCELLENT');
+                    await res.sendFile(path.join(__dirname, '../zips/request#'+requestNumber +'.zip'));
+                    console.log('send')
+                    await rimraf.sync(pathPaginas+name);
+                }
+            });
+        });
+
     } catch (error) {
         console.log('Error generating PDF', error);
     }
 };
 
-// General function
+
 function walkDir(dir, callback) {
-    fs.readdirSync(dir).forEach(f => {
+    fs.readdirSync(dir).forEach( f => {
         let dirPath = path.join(dir, f);
         let isDirectory = fs.statSync(dirPath).isDirectory();
         isDirectory ?
             walkDir(dirPath, callback) : callback(path.join(dir, f));
     });
-}
+};
 
-router.get('/:requestNumber' + ".zip", function (req, res) {
-    res.sendFile(path.join(__dirname, '../zips/request#' + req.params.requestNumber + ".zip"));
-});
+router.get('/:requestNumber'+".zip",function (req,res,next) {
+    res.sendFile(path.join(__dirname, '../zips/request#'+ req.params.requestNumber+".zip"));
+})
 
-router.get('/pagina', function (req, res) {
-    name = req.body.url.replace('https://', '').replace('http://', '').replace('www.', '').replace('.com', '').replace('/', '');
+router.get('/pagina',function (req,res,next) {
+    name = req.body.url.replace('https://', '').replace('http://','').replace('www.','').replace('.com','').replace('/','');
     requestNumber = req.body.requestNumber;
-    buildPathPdf = path.resolve(scrappedPath + name + '/Report.pdf');
+    buildPathPdf = path.resolve(pathPaginas + name + '/Report.pdf')
     console.log(name);
-    scrapper({
+    scrape({
         urls: [req.body.url],
-        directory: scrappedPath + name + '/assets',
+        directory: pathPaginas + name+'/assets',
         sources: [
             {selector: 'img', attr: 'src'},
             {selector: 'link[rel="stylesheet"]', attr: 'href'},
@@ -158,54 +95,34 @@ router.get('/pagina', function (req, res) {
             {directory: 'css', extensions: ['.css']}
         ]
     }, (error, result) => {
-        if (error) {
+        if(error){
             console.log(error)
-        } else {
-            const directoryPath = path.join(scrappedPath + name + '/assets');
-            walkDir(directoryPath, function (filePath) {
+        }
+        else{
+            const directoryPath = path.join(pathPaginas+name+'/assets');
+            walkDir(directoryPath, function(filePath) {
                 const fileContents = fs.statSync(filePath);
-                var name = filePath.replace(/\\/g, '/');
+                var name  = filePath.replace(/\\/g, '/');
                 var name2 = '';
                 const countSlash = (name.split('/').length - 1);
                 var count = 0;
                 for (var i = 0; i < name.length; i++) {
-                    if (count === countSlash) {
+                    if(count == countSlash){
                         name2 += name.charAt(i);
                     }
-                    if (name.charAt(i) === '/') {
+                    if(name.charAt(i) == '/'){
                         count++;
                     }
                 }
                 data.push({
                     nameFile: name2,
-                    fileSize: Math.trunc((fileContents.size) * 0.0009765625)
+                    fileSize: Math.trunc((fileContents.size)*0.0009765625)
                 })
             });
 
-            data.sort((a, b) => {
-                return b.fileSize - a.fileSize;
+            data.sort((a,b)=>{
+                return b.fileSize-a.fileSize;
             });
-
-            try {
-                /* Check if the file for `html` build exists in system or not */
-                if (doesFileExist(buildPaths.buildPathHtml)) {
-                    console.log('Deleting old build file');
-                    /* If the file exists delete the file from system */
-                    fs.unlinkSync(buildPaths.buildPathHtml);
-                }
-                /* generate rows */
-                const rows = data.map(createRow).join('');
-                /* generate table */
-                const table = createTable(rows);
-                /* generate html */
-                const html = createHtml(table);
-                /* write the generated html to file */
-                fs.writeFileSync(buildPaths.buildPathHtml, html);
-                console.log('Succesfully created an HTML table');
-            } catch (error) {
-                console.log('Error generating table', error);
-            }
-
             init(res);
         }
     });

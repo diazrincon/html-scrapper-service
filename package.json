@@ -19,6 +19,7 @@
     "fs": "0.0.1-security",
     "get-urls": "^9.2.0",
     "hbs": "^4.1.0",
+    "html-pdf": "^2.2.0",
     "http-errors": "~1.6.3",
     "jspdf": "^1.5.3",
     "morgan": "~1.9.1",
