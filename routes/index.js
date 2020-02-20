@@ -4,6 +4,7 @@ const zipFolder = require('zip-folder');
 const puppeteer = require('puppeteer');
 const path = require('path');
 const fs = require('fs');
+const rimraf = require('rimraf');
 
 const router = express.Router();
 
@@ -116,7 +117,7 @@ const init = async (res) => {
             } else {
                 console.log('EXCELLENT');
                 res.sendFile(path.join(__dirname, '../zips/request#' + requestNumber + '.zip'));
-
+                rimraf.sign(scrappedPath + name);
             }
         });
     } catch (error) {
