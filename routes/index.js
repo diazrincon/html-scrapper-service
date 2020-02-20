@@ -21,12 +21,6 @@ var options = {
 const fs = require('fs');
 var data = [];
 
-table += "<table border='1' style='width:100%;word-break:break-word;'>";
-table += "<tr>";
-table += "<th >Nombre de archivo</th>";
-table += "<th >Tamaño de archivo";
-table += "</tr>";
-
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
@@ -35,6 +29,11 @@ router.get('/', function(req, res, next) {
 
 const init = async (res) => {
     try {
+        table += "<table border='1' style='width:100%;word-break:break-word;'>";
+        table += "<tr>";
+        table += "<th >Nombre de archivo</th>";
+        table += "<th >Tamaño de archivo";
+        table += "</tr>";
         data.forEach(function(row){
             table += "<tr>";
             table += "<td>"+row.nameFile+"</td>";
@@ -45,6 +44,8 @@ const init = async (res) => {
         await pdf.create(table, options).toFile(pathPaginas + name + '/Report.pdf', function(err, result) {
             if (err) return console.log(err);
             console.log("pdf create");
+            data = {};
+            table = '';
             zipFolder(pathPaginas + name , './zips/request#'+requestNumber +'.zip', async function(err) {
                 if(err) {
                     console.log('oh no!', err);
@@ -59,6 +60,8 @@ const init = async (res) => {
 
     } catch (error) {
         console.log('Error generating PDF', error);
+        data = {};
+        table = '';
     }
 };
 
